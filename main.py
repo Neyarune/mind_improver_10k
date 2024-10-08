@@ -1,44 +1,113 @@
 import tkinter as tk
 import random
+import time
+import pyttsx3
+import threading
+import winsound
 from PIL import Image, ImageTk
 
-def draw_grid(k=5):
-    window_size = 800
-    cell_size = window_size // k
-    padding = (window_size - cell_size * k) // 2
+# Настройка синтезатора речи
+engine = pyttsx3.init()
 
-    # Создание окна
-    window = tk.Tk()
-    window.title("Grid Drawing")
-    canvas = tk.Canvas(window, width=window_size, height=window_size)
-    canvas.pack()
+# Установка голоса на женский
+voices = engine.getProperty('voices')
+for voice in voices:
+    if "female" in voice.name.lower():
+        engine.setProperty('voice', voice.id)
+        break
+engine.setProperty('rate', 150)  # Скорость речи
 
-    # Рисование сетки
-    for row in range(k):
-        for col in range(k):
-            x1 = padding + col * cell_size
-            y1 = padding + row * cell_size
-            x2 = x1 + cell_size
-            y2 = y1 + cell_size
-            canvas.create_rectangle(x1, y1, x2, y2, outline="black")
+# Параметры игры
+k = 5  # Размер поля
+window_size = 800
+cell_size = window_size // k
+padding = (window_size - cell_size * k) // 2
 
-    # Загрузка изображения
-    img = Image.open("myxa.png")
-    img = img.resize((cell_size, cell_size), Image.Resampling.LANCZOS)  # Используем LANCZOS вместо ANTIALIAS
-    img_tk = ImageTk.PhotoImage(img)
+# Координаты мухи (центр поля)
+fly_x, fly_y = k // 2, k // 2
 
-    # Выбор случайной клетки
-    random_row = random.randint(0, k - 1)
-    random_col = random.randint(0, k - 1)
+# Функция для синтеза речи
+def speak(text):
+    engine.say(text)
+    engine.runAndWait()
 
-    # Расчет координат для картинки
-    x1 = padding + random_col * cell_size
-    y1 = padding + random_row * cell_size
+# Функция для проигрывания звуков
+def play_sound():
+    winsound.Beep(1000, 500)  # 1000 Hz, 500 ms
+    time.sleep(1)
+    winsound.Beep(1000, 500)
 
-    # Отрисовка изображения
-    canvas.create_image(x1, y1, anchor=tk.NW, image=img_tk)
+# Функция для перемещения мухи
+def move_fly(canvas, fly):
+    global fly_x, fly_y
+    directions = ['вправо', 'влево', 'вперед', 'назад']
 
-    window.mainloop()
+    while True:
+        time.sleep(0.5)  # Уменьшено до 0.5 секунд
+        
+        direction = random.choice(directions)
+        speak(f"Муха {direction}")
 
-# Поле фиксировано размером 5x5
-draw_grid()
+        if direction == 'вправо' and fly_x < k - 1:
+            fly_x += 1
+        elif direction == 'влево' and fly_x > 0:
+            fly_x -= 1
+        elif direction == 'вперед' and fly_y > 0:
+            fly_y -= 1
+        elif direction == 'назад' and fly_y < k - 1:
+            fly_y += 1
+        else:
+            break  # Муха вышла за границы, останавливаем игру
+        
+        # Перемещение мухи на новом месте
+        x1 = padding + fly_x * cell_size
+        y1 = padding + fly_y * cell_size
+        canvas.coords(fly, x1, y1)
+    
+    speak("Игра окончена")
+
+# Функция, запускающая игру после нажатия пробела
+def start_game(event, canvas, fly):
+    global fly_x, fly_y
+    # Центрируем муху
+    fly_x, fly_y = k // 2, k // 2
+    
+    # Перемещаем изображение мухи в центр
+    x1 = padding + fly_x * cell_size
+    y1 = padding + fly_y * cell_size
+    canvas.coords(fly, x1, y1)
+
+    play_sound()
+
+    # Запуск перемещения мухи в отдельном потоке
+    fly_thread = threading.Thread(target=move_fly, args=(canvas, fly))
+    fly_thread.start()
+
+# Основное окно
+window = tk.Tk()
+window.title("Муха игра")
+canvas = tk.Canvas(window, width=window_size, height=window_size)
+canvas.pack()
+
+# Рисование сетки
+for row in range(k):
+    for col in range(k):
+        x1 = padding + col * cell_size
+        y1 = padding + row * cell_size
+        x2 = x1 + cell_size
+        y2 = y1 + cell_size
+        canvas.create_rectangle(x1, y1, x2, y2, outline="black")
+
+# Загрузка и отрисовка мухи
+fly_img = Image.open("myxa.png")
+fly_img = fly_img.resize((cell_size, cell_size), Image.Resampling.LANCZOS)
+fly_img_tk = ImageTk.PhotoImage(fly_img)  # Сохраняем картинку как глобальную переменную
+
+x1 = padding + fly_x * cell_size
+y1 = padding + fly_y * cell_size
+fly = canvas.create_image(x1, y1, anchor=tk.NW, image=fly_img_tk)
+
+# Привязка события нажатия пробела
+window.bind('<space>', lambda event: start_game(event, canvas, fly))
+
+window.mainloop()
