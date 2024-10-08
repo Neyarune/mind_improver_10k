@@ -33,9 +33,9 @@ def speak(text):
 
 # Функция для проигрывания звуков
 def play_sound():
-    winsound.Beep(1000, 500)  # 1000 Hz, 500 ms
+    winsound.Beep(600, 300)  # 600 Hz, 300 ms
     time.sleep(1)
-    winsound.Beep(1000, 500)
+    winsound.Beep(600, 300)
 
 # Функция для перемещения мухи
 def move_fly(canvas, fly):
@@ -43,7 +43,7 @@ def move_fly(canvas, fly):
     directions = ['вправо', 'влево', 'вперед', 'назад']
 
     while True:
-        time.sleep(0.5)  # Уменьшено до 0.5 секунд
+        time.sleep(0.7)  # Уменьшено до 0.7 секунд
         
         direction = random.choice(directions)
         speak(f"Муха {direction}")
